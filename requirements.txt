@@ -1,0 +1,24 @@
+# Manipulação e Análise de Dados
+pandas>=2.0.0
+
+# Conexão e Drivers de Banco de Dados (MySQL e PostgreSQL)
+SQLAlchemy>=2.0.0
+pymysql>=1.1.0
+cryptography>=41.0.0
+psycopg2-binary>=2.9.0
+
+# Download e Integração
+gdown>=5.0.0
+requests>=2.31.0
+
+# Configuração e Variáveis de Ambiente
+python-dotenv>=1.0.0
+
+# Visualização de Dados
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Ambiente Interativo e Notebooks
+jupyter>=1.0.0
+notebook>=7.0.0
+ipykernel>=6.0.0

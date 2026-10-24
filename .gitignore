@@ -1,0 +1,16 @@
+# Credenciais
+.env
+
+# Dados (nunca versionar)
+data/
+*.zip
+*.csv
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
