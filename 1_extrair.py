@@ -1,108 +1,186 @@
-import pandas as pd
+import sys
 from pathlib import Path
-
+import pandas as pd
 from banco import conectar, executar, inserir_em_lote
-from config import ARQUIVOS
+
+NOME_BANCO = "viagens_transparencia"
+PASTA_DADOS = Path("data")
+CHUNK_SIZE = 50000  # Processa de 50 mil em 50 mil linhas para otimizar memória
+
+CONFIG_ARQUIVOS = {
+    "2025_Viagem.csv": {
+        "tabela": "raw_viagens",
+        "colunas": {
+            "Identificador do processo de viagem": "id_viagem",
+            "Número da Proposta (PCDP)": "num_proposta",
+            "Situação": "situacao",
+            "Viagem Urgente": "viagem_urgente",
+            "Justificativa Urgência Viagem": "justificativa_urgencia",
+            "Código do órgão superior": "cod_orgao_superior",
+            "Nome do órgão superior": "nome_orgao_superior",
+            "Código órgão solicitante": "cod_orgao_solicitante",
+            "Nome órgão solicitante": "nome_orgao_solicitante",
+            "CPF viajante": "cpf_viajante",
+            "Nome": "nome_viajante",
+            "Cargo": "cargo",
+            "Função": "funcao",
+            "Descrição Função": "descricao_funcao",
+            "Período - Data de início": "data_inicio",
+            "Período - Data de fim": "data_fim",
+            "Destinos": "destinos",
+            "Motivo": "motivo",
+            "Valor diárias": "valor_diarias",
+            "Valor passagens": "valor_passagens",
+            "Valor devolução": "valor_devolucao",
+            "Valor outros gastos": "valor_outros_gastos",
+        },
+    },
+    "2025_Pagamento.csv": {
+        "tabela": "raw_pagamentos",
+        "colunas": {
+            "Identificador do processo de viagem": "id_viagem",
+            "Número da Proposta (PCDP)": "num_proposta",
+            "Código do órgão superior": "cod_orgao_superior",
+            "Nome do órgão superior": "nome_orgao_superior",
+            "Codigo do orgao pagador": "cod_orgao_pagador",
+            "Nome do orgao pagador": "nome_orgao_pagador",
+            "Código da unidade gestora pagadora": "cod_ug_pagadora",
+            "Nome da unidade gestora pagadora": "nome_ug_pagadora",
+            "Tipo de pagamento": "tipo_pagamento",
+            "Valor": "valor",
+        },
+    },
+    "2025_Passagem.csv": {
+        "tabela": "raw_passagens",
+        "colunas": {
+            "Identificador do processo de viagem": "id_processo_viagem",
+            "Número da Proposta (PCDP)": "num_proposta_pcdp",
+            "Meio de transporte": "meio_transporte",
+            "País - Origem ida": "pais_origem_ida",
+            "UF - Origem ida": "uf_origem_ida",
+            "Cidade - Origem ida": "cidade_origem_ida",
+            "País - Destino ida": "pais_destino_ida",
+            "UF - Destino ida": "uf_destino_ida",
+            "Cidade - Destino ida": "cidade_destino_ida",
+            "País - Origem volta": "pais_origem_volta",
+            "UF - Origem volta": "uf_origem_volta",
+            "Cidade - Origem volta": "cidade_origem_volta",
+            "País - Destino volta": "pais_destino_volta",
+            "UF - Destino volta": "uf_destino_volta",
+            "Cidade - Destino volta": "cidade_destino_volta",
+            "Valor da passagem": "valor_passagem",
+            "Taxa de serviço": "taxa_servico",
+            "Data da emissão/compra": "data_emissao_compra",
+            "Hora da emissão/compra": "hora_emissao_compra",
+        },
+    },
+    "2025_Trecho.csv": {
+        "tabela": "raw_trechos",
+        "colunas": {
+            "Identificador do processo de viagem": "id_processo_viagem",
+            "Número da Proposta (PCDP)": "num_proposta_pcdp",
+            "Sequência Trecho": "sequencia_trecho",
+            "Origem - Data": "origem_data",
+            "Origem - País": "origem_pais",
+            "Origem - UF": "origem_uf",
+            "Origem - Cidade": "origem_cidade",
+            "Destino - Data": "destino_data",
+            "Destino - País": "destino_pais",
+            "Destino - UF": "destino_uf",
+            "Destino - Cidade": "destino_cidade",
+            "Meio de transporte": "meio_transporte",
+            "Número de diárias": "numero_diarias",
+            "Missão?": "missao",
+        },
+    },
+}
 
 
-def validar_csvs():
-    """
-    Verifica se todos os arquivos CSV necessários existem na pasta data/.
-    """
+def carregar_dados_completos(conexao, arquivo_csv: str, cfg: dict) -> bool:
+    caminho = PASTA_DADOS / arquivo_csv
+    tabela = cfg["tabela"]
+    mapa_colunas = cfg["colunas"]
 
-    arquivos_faltando = []
-
-    for csv_name in ARQUIVOS.keys():
-        csv_path = Path("data") / csv_name
-
-        if not csv_path.exists():
-            arquivos_faltando.append(str(csv_path))
-
-    if arquivos_faltando:
-        print("❌ Os seguintes arquivos não foram encontrados:")
-
-        for arquivo in arquivos_faltando:
-            print(f"   - {arquivo}")
-
-        print("\nExtraia os CSVs para a pasta 'data/' antes de executar a carga.")
-        return False
-
-    return True
-
-
-def carregar_csv(tabela, arquivo_csv):
-    """
-    Lê um CSV e insere em uma tabela raw.
-
-    Args:
-        tabela: Nome da tabela no banco.
-        arquivo_csv: Caminho do arquivo CSV.
-    """
-
-    conexao = conectar("viagens_transparencia")
-
-    if conexao is None:
-        print("❌ Não foi possível conectar ao banco")
+    if not caminho.exists():
+        print(f"❌ Arquivo não encontrado: {caminho}")
         return False
 
     try:
-        # Passo 1: Limpar a tabela
-        print(f"  → Limpando tabela {tabela}...")
+        # 1. Idempotência: limpa a tabela antes da nova carga
+        print(f"  → 🧹 Esvaziando tabela '{tabela}' (TRUNCATE)...")
         executar(conexao, f"TRUNCATE TABLE {tabela}", commit=True)
 
-        # Passo 2: Ler CSV em lotes
-        print(f"  → Lendo {arquivo_csv}...")
-        chunk_size = 50000
-
-        total_linhas = 0
-
-        for chunk in pd.read_csv(
-            arquivo_csv,
+        # 2. Leitura de todos os registros em blocos (chunks)
+        print(f"  → 📖 Lendo '{arquivo_csv}' em blocos de {CHUNK_SIZE:,} linhas...")
+        blocos = pd.read_csv(
+            caminho,
             sep=";",
             encoding="latin-1",
             dtype=str,
             keep_default_na=False,
-            chunksize=chunk_size
-        ):
-            # Passo 3: Inserir lote
-            if inserir_em_lote(conexao, tabela, chunk):
-                total_linhas += len(chunk)
-                print(f"    → {total_linhas:,} linhas inseridas...")
+            chunksize=CHUNK_SIZE,
+        )
 
-        print(f"✓ Tabela {tabela}: {total_linhas:,} linhas carregadas\n")
+        total_linhas = 0
+        for chunk in blocos:
+            # Filtra e renomeia apenas as colunas mapeadas que constam no arquivo
+            colunas_disponiveis = {orig: dest for orig, dest in mapa_colunas.items() if orig in chunk.columns}
+            chunk_filtrado = chunk[list(colunas_disponiveis.keys())].rename(columns=colunas_disponiveis)
+
+            # Converte valores vazios para None para gravarem como NULL no banco
+            chunk_tratado = chunk_filtrado.replace({"": None})
+
+            # Inserção do bloco no banco
+            if not inserir_em_lote(conexao, tabela, chunk_tratado):
+                raise RuntimeError(f"Falha ao inserir lote na tabela '{tabela}'.")
+
+            total_linhas += len(chunk_tratado)
+            print(f"     ↳ {total_linhas:,} linhas inseridas...")
+
+        print(f"  ✓ Tabela '{tabela}': carga concluída com {total_linhas:,} linhas.\n")
         return True
 
-    except Exception as e:
-        print(f"❌ Erro ao carregar {arquivo_csv}: {e}")
+    except Exception as erro:
+        print(f"  ❌ Erro ao carregar '{arquivo_csv}': {erro}\n")
         return False
+
+
+def main():
+    print("=" * 60)
+    print("🚀 FASE 1: EXTRAÇÃO E CARGA TOTAL NA CAMADA RAW")
+    print(f"🎯 Banco de Dados: {NOME_BANCO}")
+    print("=" * 60 + "\n")
+
+    if not PASTA_DADOS.exists():
+        print(f"❌ Diretório não encontrado: {PASTA_DADOS}")
+        sys.exit(1)
+
+    conexao = conectar(NOME_BANCO)
+    if conexao is None:
+        print(f"❌ Falha de conexão ao banco '{NOME_BANCO}'.")
+        sys.exit(1)
+
+    print(f"🔌 Conectado ao banco '{NOME_BANCO}' com sucesso!\n")
+
+    try:
+        sucesso_total = True
+        for arquivo_csv, cfg in CONFIG_ARQUIVOS.items():
+            print(f"📥 Processando '{arquivo_csv}' -> Tabela '{cfg['tabela']}'...")
+            if not carregar_dados_completos(conexao, arquivo_csv, cfg):
+                sucesso_total = False
+                break
+
+        print("=" * 60)
+        if sucesso_total:
+            print("✅ Fase 1 concluída com sucesso! Toda a Camada Raw foi populada.")
+        else:
+            print("❌ A extração apresentou erros. Verifique os logs acima.")
+        print("=" * 60)
 
     finally:
         conexao.close()
+        print("🔒 Conexão com o banco fechada.")
 
 
-# ===== INÍCIO DO SCRIPT =====
-
-print("=" * 60)
-print("FASE 1: EXTRAIR DADOS PARA RAW")
-print("=" * 60)
-print()
-
-# Verificar se todos os CSVs necessários existem
-if not validar_csvs():
-    print("❌ Fase 1 falhou!")
-    exit(1)
-
-# Carregar cada arquivo CSV
-for csv_name, table_name in ARQUIVOS.items():
-
-    csv_path = Path("data") / csv_name
-
-    print(f"Carregando {csv_name}...")
-
-    if not carregar_csv(table_name, csv_path):
-        print(f"❌ Falha ao carregar {csv_name}")
-        exit(1)
-
-print("=" * 60)
-print("✅ Fase 1 concluída com sucesso!")
-print("=" * 60)
+if __name__ == "__main__":
+    main()
