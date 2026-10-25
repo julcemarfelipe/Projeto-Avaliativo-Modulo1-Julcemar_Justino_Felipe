@@ -1,108 +1,124 @@
-import pandas as pd
+import sys
 from pathlib import Path
+import pandas as pd
 
 from banco import conectar, executar, inserir_em_lote
-from config import ARQUIVOS
+
+# -------------------------------------------------------------
+# Configurações do Projeto
+# -------------------------------------------------------------
+DB_NOME = "viagens_transparencia"
+DATA_DIR = Path(__file__).resolve().parent / "data"
+
+# Mapeamento: Arquivo CSV -> Tabela de destino na Raw
+MAPEAMENTO_ARQUIVOS = {
+    "2025_Viagem.csv": "raw_viagem",
+    "2025_Pagamento.csv": "raw_pagamento",
+    "2025_Passagem.csv": "raw_passagem",
+    "2025_Trecho.csv": "raw_trecho",
+}
+
+CHUNK_SIZE = 50000
 
 
-def validar_csvs():
-    """
-    Verifica se todos os arquivos CSV necessários existem na pasta data/.
-    """
+def verificar_arquivos_csv() -> bool:
+    """Verifica se os 4 arquivos CSV estão disponíveis na pasta data/."""
+    if not DATA_DIR.exists():
+        print(f"❌ Diretório não encontrado: {DATA_DIR}")
+        return False
 
-    arquivos_faltando = []
+    arquivos_faltantes = [
+        csv_nome for csv_nome in MAPEAMENTO_ARQUIVOS.keys()
+        if not (DATA_DIR / csv_nome).exists()
+    ]
 
-    for csv_name in ARQUIVOS.keys():
-        csv_path = Path("data") / csv_name
-
-        if not csv_path.exists():
-            arquivos_faltando.append(str(csv_path))
-
-    if arquivos_faltando:
-        print("❌ Os seguintes arquivos não foram encontrados:")
-
-        for arquivo in arquivos_faltando:
-            print(f"   - {arquivo}")
-
-        print("\nExtraia os CSVs para a pasta 'data/' antes de executar a carga.")
+    if arquivos_faltantes:
+        print("❌ Faltam arquivos na pasta 'data/':")
+        for nome in arquivos_faltantes:
+            print(f"   • {nome}")
         return False
 
     return True
 
 
-def carregar_csv(tabela, arquivo_csv):
+def carregar_csv(conexao, tabela: str, caminho_csv: Path) -> bool:
     """
-    Lê um CSV e insere em uma tabela raw.
-
-    Args:
-        tabela: Nome da tabela no banco.
-        arquivo_csv: Caminho do arquivo CSV.
+    Limpa a tabela raw via TRUNCATE e faz a carga em blocos (chunks).
+    Preserva todos os campos como string (fiel ao CSV original).
     """
-
-    conexao = conectar("viagens_transparencia")
-
-    if conexao is None:
-        print("❌ Não foi possível conectar ao banco")
-        return False
-
     try:
-        # Passo 1: Limpar a tabela
-        print(f"  → Limpando tabela {tabela}...")
+        # 1. Idempotência: Esvazia a tabela antes da nova carga
+        print(f"  ↳ 🧹 Limpando tabela '{tabela}' (TRUNCATE)...")
         executar(conexao, f"TRUNCATE TABLE {tabela}", commit=True)
 
-        # Passo 2: Ler CSV em lotes
-        print(f"  → Lendo {arquivo_csv}...")
-        chunk_size = 50000
-
+        # 2. Leitura e ingestão em chunks
+        print(f"  ↳ 📖 Lendo '{caminho_csv.name}' em blocos de {CHUNK_SIZE:,} linhas...")
         total_linhas = 0
 
-        for chunk in pd.read_csv(
-            arquivo_csv,
+        chunks = pd.read_csv(
+            caminho_csv,
             sep=";",
             encoding="latin-1",
             dtype=str,
             keep_default_na=False,
-            chunksize=chunk_size
-        ):
-            # Passo 3: Inserir lote
-            if inserir_em_lote(conexao, tabela, chunk):
-                total_linhas += len(chunk)
-                print(f"    → {total_linhas:,} linhas inseridas...")
+            chunksize=CHUNK_SIZE
+        )
 
-        print(f"✓ Tabela {tabela}: {total_linhas:,} linhas carregadas\n")
+        for chunk in chunks:
+            # Substitui strings vazias por None para inserir como NULL
+            chunk_tratado = chunk.replace({"": None})
+            
+            sucesso = inserir_em_lote(conexao, tabela, chunk_tratado)
+            if not sucesso:
+                raise RuntimeError(f"Falha ao inserir lote na tabela {tabela}.")
+
+            total_linhas += len(chunk_tratado)
+            print(f"     ↳ {total_linhas:,} linhas inseridas...")
+
+        print(f"  ✅ Concluído: {total_linhas:,} linhas carregadas em '{tabela}'.\n")
         return True
 
-    except Exception as e:
-        print(f"❌ Erro ao carregar {arquivo_csv}: {e}")
+    except Exception as erro:
+        print(f"  ❌ Erro ao processar '{caminho_csv.name}': {erro}\n")
         return False
+
+
+def main():
+    print("=" * 60)
+    print("🚀 FASE 1: EXTRAÇÃO E CARGA NA CAMADA RAW")
+    print(f"🎯 Banco de Dados: {DB_NOME}")
+    print("=" * 60 + "\n")
+
+    # 1. Validação de pré-requisitos dos dados
+    if not verificar_arquivos_csv():
+        print("\n❌ Execução interrompida. Certifique-se de descompactar os CSVs em 'data/'.")
+        sys.exit(1)
+
+    # 2. Conexão ao banco de dados
+    conexao = conectar(DB_NOME)
+    if conexao is None:
+        print(f"❌ Não foi possível conectar ao banco '{DB_NOME}'. Verifique seu .env.")
+        sys.exit(1)
+
+    print("🔌 Conectado ao banco de dados com sucesso!\n")
+
+    # 3. Carga iterativa para cada tabela Raw
+    try:
+        for csv_nome, tabela_nome in MAPEAMENTO_ARQUIVOS.items():
+            csv_path = DATA_DIR / csv_nome
+            print(f"📥 Processando '{csv_nome}' -> Tabela '{tabela_nome}':")
+
+            if not carregar_csv(conexao, tabela_nome, csv_path):
+                print(f"❌ Falha na carga da tabela '{tabela_nome}'.")
+                sys.exit(1)
+
+        print("=" * 60)
+        print("✅ Fase 1 concluída com sucesso! Camada Raw populada.")
+        print("=" * 60)
 
     finally:
         conexao.close()
 
 
-# ===== INÍCIO DO SCRIPT =====
-
-print("=" * 60)
-print("FASE 1: EXTRAIR DADOS PARA RAW")
-print("=" * 60)
-print()
-
-# Verificar se todos os CSVs necessários existem
-if not validar_csvs():
-    print("❌ Fase 1 falhou!")
-    exit(1)
-
-# Carregar cada arquivo CSV
-for csv_name, table_name in ARQUIVOS.items():
-
-    csv_path = Path("data") / csv_name
-
-    print(f"Carregando {csv_name}...")
-
-    if not carregar_csv(table_name, csv_path):
-        print(f"❌ Falha ao carregar {csv_name}")
-        exit(1)
-
-print("=" * 60)
-print("✅ Fase 1 concluída com sucesso!")
-print("=" * 60)
+if __name__ == "__main__":
+    main()
