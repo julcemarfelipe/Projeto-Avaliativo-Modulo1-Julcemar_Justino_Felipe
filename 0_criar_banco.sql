@@ -100,7 +100,7 @@ CREATE TABLE raw_trechos (
 
 DROP TABLE IF EXISTS silver_itens CASCADE;
 DROP TABLE IF EXISTS silver_vendas CASCADE;
-
+DROP TABLE IF EXISTS raw_trechos CASCADE;
 DROP TABLE IF EXISTS silver_viagens CASCADE;
 
 CREATE TABLE silver_viagens (
