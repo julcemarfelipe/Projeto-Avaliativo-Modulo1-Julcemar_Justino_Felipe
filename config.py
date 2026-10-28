@@ -15,8 +15,8 @@ POSTGRES_CONFIG = {
 
 # Dicionário mapeando CSVs para tabelas
 ARQUIVOS = {
-    "2025_Viagem.csv": "raw_viagens",
-    "2025_Pagamento.csv": "raw_pagamentos",
-    "2025_Passagem.csv": "raw_passagens",
-    "2025_Trecho.csv": "raw_trechos",
+     "raw_viagens": "2025_Viagem.csv",
+    "raw_pagamentos": "2025_Pagamento.csv",
+    "raw_passagens": "2025_Passagem.csv",
+    "raw_trechos": "2025_Trecho.csv",
 }
