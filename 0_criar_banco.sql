@@ -76,7 +76,6 @@ CREATE TABLE raw_pagamentos (
     valor VARCHAR(20)
 );
 
-
 CREATE TABLE raw_trechos (
     id_processo_viagem VARCHAR(20),
     num_proposta_pcdp VARCHAR(20),
@@ -93,14 +92,13 @@ CREATE TABLE raw_trechos (
     numero_diarias VARCHAR(20),
     missao VARCHAR(50)
 );
-
 -- =====================================================================
 -- TABELAS SILVER (dados limpos e convertidos para tipos corretos)
 -- =====================================================================
 
 DROP TABLE IF EXISTS silver_itens CASCADE;
 DROP TABLE IF EXISTS silver_vendas CASCADE;
-DROP TABLE IF EXISTS raw_trechos CASCADE;
+DROP TABLE IF EXISTS silver_trechos CASCADE;
 DROP TABLE IF EXISTS silver_viagens CASCADE;
 
 CREATE TABLE silver_viagens (
