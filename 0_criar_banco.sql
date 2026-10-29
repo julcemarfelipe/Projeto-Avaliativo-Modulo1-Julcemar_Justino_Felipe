@@ -9,10 +9,11 @@
 -- TABELAS RAW (dados brutos do CSV, tudo como texto)
 -- =====================================================================
 
+DROP TABLE IF EXISTS raw_viagens CASCADE;
 DROP TABLE IF EXISTS raw_trechos CASCADE;
 DROP TABLE IF EXISTS raw_passagens CASCADE;
 DROP TABLE IF EXISTS raw_pagamentos CASCADE;
-DROP TABLE IF EXISTS raw_viagens CASCADE;
+
 
 CREATE TABLE raw_viagens (
     id_viagem VARCHAR(20),
@@ -39,18 +40,6 @@ CREATE TABLE raw_viagens (
     valor_outros_gastos VARCHAR(30)
 );
 
-CREATE TABLE raw_pagamentos (
-    id_viagem VARCHAR(20),
-    num_proposta VARCHAR(20),
-    cod_orgao_superior VARCHAR(20),
-    nome_orgao_superior VARCHAR(255),
-    cod_orgao_pagador VARCHAR(20),
-    nome_orgao_pagador VARCHAR(255),
-    cod_ug_pagadora VARCHAR(20),
-    nome_ug_pagadora VARCHAR(255),
-    tipo_pagamento VARCHAR(50),
-    valor VARCHAR(30)
-);
 
 CREATE TABLE raw_passagens (
     id_processo_viagem VARCHAR(20),
@@ -74,7 +63,6 @@ CREATE TABLE raw_passagens (
     hora_emissao_compra VARCHAR(20)
 );
 
-<<<<<<< Updated upstream
 CREATE TABLE raw_pagamentos (
     id_viagem VARCHAR(20),
     num_proposta VARCHAR(20),
@@ -88,8 +76,6 @@ CREATE TABLE raw_pagamentos (
     valor VARCHAR(20)
 );
 
-=======
->>>>>>> Stashed changes
 CREATE TABLE raw_trechos (
     id_processo_viagem VARCHAR(20),
     num_proposta_pcdp VARCHAR(20),
@@ -112,12 +98,8 @@ CREATE TABLE raw_trechos (
 
 DROP TABLE IF EXISTS silver_itens CASCADE;
 DROP TABLE IF EXISTS silver_vendas CASCADE;
-<<<<<<< Updated upstream
 DROP TABLE IF EXISTS silver_trechos CASCADE;
-=======
->>>>>>> Stashed changes
 DROP TABLE IF EXISTS silver_viagens CASCADE;
-drop table if exists silver_passagens cascade;
 
 CREATE TABLE silver_viagens (
     id_viagem VARCHAR(20) PRIMARY KEY NOT NULL,
