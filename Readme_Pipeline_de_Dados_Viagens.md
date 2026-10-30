@@ -444,6 +444,16 @@ A contagem da Silver é igual à da Raw nas quatro tabelas, ou seja, **nenhuma l
 
 ---
 
+## 🌟 9. Boas práticas adotadas
+
+- Credenciais apenas no `.env`, fora do código e do Git.
+- `.gitignore` adequado (`.env`, `.zip`, `.csv`, `data/`).
+- Código modularizado (`config.py`, `banco.py`) e seguindo a PEP-8.
+- Scripts numerados pela ordem de execução.
+- Commits curtos e diretos, no imperativo ("implementa X", "corrige Y").
+
+---
+
 ## 🔗 10. Fonte dos dados
 
 [Portal da Transparência do Governo Federal: Viagens a Serviço](https://portaldatransparencia.gov.br/viagens)
