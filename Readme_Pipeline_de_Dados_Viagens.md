@@ -287,7 +287,7 @@ Todos os números abaixo vêm da execução real do `3_analise.ipynb` sobre os 6
 
 ### 🏛️ P1. Os 5 órgãos com maior custo total
 
-![Top 5 órgãos por custo total](imagens/imagens/p1_top5_orgaos_custo.png)
+![Top 5 órgãos por custo total](imagens/p1_top5_orgaos_custo.png)
 
 | Órgão | Viagens | Custo total |
 |---|---:|---:|
