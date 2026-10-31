@@ -431,29 +431,41 @@ A contagem da Silver é igual à da Raw nas quatro tabelas, ou seja, **nenhuma l
 
 ---
 
-## 🔮 8. Melhorias futuras
-
-- **Agendamento automático** do pipeline (cron, Airflow ou Prefect) para atualização periódica.
-- **Carga incremental** em vez de `TRUNCATE` + recarga total, reduzindo o tempo em bases maiores.
-- **Tabela de rejeitados:** registrar as linhas descartadas na Silver (órfãs, datas inválidas) em vez de apenas descartá-las.
-- **Testes automatizados** (pytest) para as funções de conversão de valores e datas.
-- **Logging estruturado** (`logging`) no lugar de `print`, com arquivo de log por execução.
-- **Containerização** com Docker Compose (PostgreSQL + Python) para reprodução com um único comando.
-- **Dashboard** interativo (Power BI, Metabase ou Streamlit) sobre a camada Gold.
-- **Ampliar o período** para o ano completo e outros anos, com particionamento das tabelas.
-
----
-
-## 🌟 9. Boas práticas adotadas
+## 🌟 8. Boas práticas adotadas
 
 - Credenciais apenas no `.env`, fora do código e do Git.
 - `.gitignore` adequado (`.env`, `.zip`, `.csv`, `data/`).
 - Código modularizado (`config.py`, `banco.py`) e seguindo a PEP-8.
 - Scripts numerados pela ordem de execução.
 - Commits curtos e diretos, no imperativo ("implementa X", "corrige Y").
-
 ---
 
-## 🔗 10. Fonte dos dados
+## 📚 9. Referências
 
-[Portal da Transparência do Governo Federal: Viagens a Serviço](https://portaldatransparencia.gov.br/viagens)
+### 🗃️ Fonte dos dados
+
+- CONTROLADORIA-GERAL DA UNIÃO. **Portal da Transparência do Governo Federal: Viagens a Serviço**. Brasília: CGU, 2025. Disponível em: <https://portaldatransparencia.gov.br/viagens>. Acesso em: 30 out. 2026.
+
+### 📖 Documentação técnica
+
+- THE POSTGRESQL GLOBAL DEVELOPMENT GROUP. **PostgreSQL 18 Documentation**. Disponível em: <https://www.postgresql.org/docs/18/> (versão em PDF: <https://www.postgresql.org/files/documentation/pdf/18/postgresql-18-A4.pdf>). Consultado principalmente para `SELECT ... DISTINCT ON`, `TO_DATE`, restrições (`PRIMARY KEY`, `FOREIGN KEY`, `CHECK`) e transações.
+- PANDAS DEVELOPMENT TEAM. **pandas documentation**. Disponível em: <https://pandas.pydata.org/docs/>. Leitura de CSV em blocos (`chunksize`) e `read_sql`.
+- SQLALCHEMY. **SQLAlchemy documentation**. Disponível em: <https://docs.sqlalchemy.org/>. Conexão, transações e execução de SQL.
+- PSYCOPG. **Psycopg 2 documentation**. Disponível em: <https://www.psycopg.org/docs/>. Driver de conexão com o PostgreSQL.
+- MATPLOTLIB DEVELOPMENT TEAM. **Matplotlib documentation**. Disponível em: <https://matplotlib.org/stable/>.
+- WASKOM, M. **seaborn: statistical data visualization**. Disponível em: <https://seaborn.pydata.org/>.
+- WKENTARO. **gdown**: download de arquivos do Google Drive. Disponível em: <https://github.com/wkentaro/gdown>.
+- SKUMAR, Saurabh. **python-dotenv**: leitura de variáveis de ambiente a partir de arquivos `.env`. Disponível em: <https://github.com/theskumar/python-dotenv>.
+- **Mermaid**: diagramas a partir de texto (usado na arquitetura e no modelo relacional). Disponível em: <https://mermaid.js.org/>.
+
+### 🧠 Conceitos
+
+- DATABRICKS. **What is a Medallion Architecture?** Disponível em: <https://www.databricks.com/glossary/medallion-architecture>. Base conceitual das camadas Raw (Bronze), Silver e Gold.
+
+### 🤖 Ferramentas de apoio (IA generativa)
+
+- ANTHROPIC. **Claude Sonnet 5.5** [Modelo de linguagem de grande escala]. São Francisco: Anthropic, 2026. Disponível em: <https://claude.ai>. Acesso em: 30 out. 2026. Utilizado como apoio na redação dos resultados e insights, na geração dos gráficos das perguntas P3, P6 e P7 e na revisão da documentação técnica. Todo o código, as execuções e os resultados foram conferidos pelo autor.
+
+### 🎓 Material da disciplina
+
+- **Análise de Dados com Python** (Turma T6), Módulo 1.
